@@ -1,0 +1,27 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+websockets>=13.0
+pydantic>=2.0
+httpx>=0.27.0
+apscheduler>=3.10.0
+python-multipart>=0.0.9
+
+# Market data (free, no API key)
+yfinance>=0.2.55
+feedparser>=6.0.11
+
+# Export
+openpyxl>=3.1.2
+gspread>=6.1.0
+
+# LLM providers — install only what you need
+anthropic>=0.40.0
+openai>=1.50.0
+
+# Optional: structured outputs, CrewAI
+# instructor>=1.3.0
+# crewai>=0.70.0
+
+# Production frontend serving
+# (included in fastapi[standard])
+aiofiles>=23.0

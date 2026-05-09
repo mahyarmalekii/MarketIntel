@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "2860:8000"
+    environment:
+      PORT: "8000"
+      HOST: "0.0.0.0"
+      # Set API_SECRET to a fixed string so the frontend can read it from VITE_API_TOKEN
+      # API_SECRET: "change-me-in-production"
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:4173"
+      DATABASE_URL: "/app/data/market.db"
+      # LLM keys — add yours here or use a .env file
+      # ANTHROPIC_API_KEY: ""
+      # OPENAI_API_KEY: ""
+    volumes:
+      - ./data:/app/data   # persist SQLite across restarts
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_BACKEND_URL: "http://localhost:2860"
+    command: sh -c "npm install && npm run dev -- --host"
+    depends_on:
+      - backend

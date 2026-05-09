@@ -1,0 +1,168 @@
+/* ══════════════════════════════════════════════════
+   PREMIUM DARK THEME — Overrides index.css tokens
+   Transforms the entire app to a dark, JP Morgan-style
+   institutional look.
+══════════════════════════════════════════════════ */
+
+@theme {
+  /* ─── Surface / Background ─── */
+  --paper:    #0d1510;
+  --paper-2:  #151d18;
+  --paper-3:  #19211c;
+  --paper-4:  #242c26;
+  --card:     #19211c;
+
+  /* ─── Text ─── */
+  --ink:      #dce5dc;
+  --ink-2:    #bacbbd;
+  --ink-3:    #859589;
+  --ink-4:    #3c4a40;
+
+  /* ─── Lines / Borders ─── */
+  --line:     rgba(255,255,255,0.06);
+  --line-2:   rgba(255,255,255,0.03);
+  --line-lo:  rgba(255,255,255,0.03);
+
+  /* ─── Accents ─── */
+  --accent:       #51faaa;
+  --accent-soft:  rgba(81,250,170,0.12);
+
+  /* ─── Status Colors ─── */
+  --ok:       #51faaa;
+  --ok-soft:  rgba(81,250,170,0.12);
+  --warn:     #ffdb72;
+  --bad:      #ff6b6b;
+  --bad-soft: rgba(255,107,107,0.12);
+
+  /* ─── Pastel Palette (dark-adapted) ─── */
+  --blue:        #6da3d4;
+  --blue-soft:   rgba(109,163,212,0.12);
+  --blue-ink:    #a3c4e0;
+
+  --purple:      #a18cd1;
+  --purple-soft: rgba(161,140,209,0.12);
+  --purple-ink:  #c2b0e8;
+
+  --green:       #6fcf97;
+  --green-soft:  rgba(111,207,151,0.12);
+  --green-ink:   #93dbb0;
+
+  --yellow:      #f2c94c;
+  --yellow-soft: rgba(242,201,76,0.12);
+  --yellow-ink:  #f5d87a;
+
+  --orange:      #f2994a;
+  --orange-soft: rgba(242,153,74,0.12);
+  --orange-ink:  #f5b77a;
+
+  --teal:        #56ccdb;
+  --teal-soft:   rgba(86,204,219,0.12);
+  --teal-ink:    #85dcec;
+
+  --pink:        #e08ca8;
+  --pink-soft:   rgba(224,140,168,0.12);
+  --pink-ink:    #ebb5c8;
+
+  --coral-soft:  rgba(255,130,110,0.12);
+
+  /* ─── Shadows (dark-adapted) ─── */
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.30);
+  --shadow-sm:  0 2px 6px rgba(0,0,0,0.40);
+  --shadow-md:  0 6px 18px rgba(0,0,0,0.50);
+  --shadow-lg:  0 18px 60px rgba(0,0,0,0.60), 0 4px 16px rgba(0,0,0,0.40);
+
+  /* ─── Premium Tailwind Colors ─── */
+  --color-surface-container: #19211c;
+  --color-primary-container: #51faaa;
+  --color-on-surface-variant: #bacbbd;
+  --color-on-primary: #003921;
+  --color-surface-variant: #2e3731;
+  --color-on-secondary-container: #ff96fc;
+  --color-primary-fixed: #57ffae;
+  --color-surface-bright: #333b35;
+  --color-on-error: #690005;
+  --color-on-background: #dce5dc;
+  --color-primary: #eefff1;
+  --color-surface-tint: #2de194;
+  --color-error-container: #93000a;
+  --color-error: #ffb4ab;
+  --color-surface-dim: #0d1510;
+  --color-surface-container-high: #242c26;
+  --color-surface-container-low: #151d18;
+  --color-inverse-surface: #dce5dc;
+  --color-surface-container-highest: #2e3731;
+  --color-inverse-on-surface: #2a322c;
+  --color-primary-fixed-dim: #2de194;
+  --color-tertiary-container: #ffdb72;
+  --color-outline: #859589;
+  --color-surface-container-lowest: #08100b;
+  --color-outline-variant: #3c4a40;
+  --color-on-primary-container: #007046;
+  --color-secondary-container: #86018e;
+  --color-on-error-container: #ffdad6;
+  --color-on-surface: #dce5dc;
+  --color-inverse-primary: #006d43;
+  --color-surface: #0d1510;
+  --color-background: #0d1510;
+  --color-obsidian-base: #050505;
+  --color-obsidian-section: #0C0E1D;
+
+  --spacing-xs: 0.5rem;
+  --spacing-lg: 2rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-xl: 3rem;
+  --spacing-margin: 2rem;
+  --spacing-unit: 4px;
+  --spacing-gutter: 1.5rem;
+  --spacing-page-mx: 32px;
+  --spacing-section-py: 64px;
+}
+
+/* ─── Force dark color-scheme globally ─── */
+@layer base {
+  html {
+    color-scheme: dark !important;
+  }
+  ::-webkit-scrollbar-thumb { background: #3c4a40; }
+  ::-webkit-scrollbar-thumb:hover { background: #51faaa; }
+}
+
+/* ─── Premium Components ─── */
+@layer components {
+    .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .glass-card:hover {
+        border: 1px solid rgba(81, 250, 170, 0.2);
+        box-shadow: 0 0 20px rgba(81, 250, 170, 0.05);
+    }
+
+    .obsidian-section {
+        background-color: #0C0E1D;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .glow-text {
+        text-shadow: 0 0 10px rgba(81, 250, 170, 0.3);
+    }
+}
+
+/* ─── Subtle glow on accent buttons ─── */
+.btn:hover {
+  border-color: rgba(81, 250, 170, 0.3) !important;
+}
+
+.nav-item.active {
+  background: rgba(81, 250, 170, 0.08) !important;
+  border: 1px solid rgba(81, 250, 170, 0.15);
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
