@@ -18,6 +18,8 @@ import re
 import secrets
 import socket
 import time
+import webbrowser
+import threading
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -140,6 +142,12 @@ async def lifespan(app: FastAPI):
     _log.info("DB ready at %s", db.DB_PATH)
     _sched.add_job(_auto_news, "interval", hours=1, id="auto_news")
     _sched.start()
+    
+    def open_browser():
+        time.sleep(2)
+        webbrowser.open("http://localhost:5173")
+    
+    threading.Thread(target=open_browser, daemon=True).start()
     yield
     _sched.shutdown(wait=False)
 
@@ -1237,6 +1245,44 @@ CRITICAL: Return ONLY a valid JSON array. No markdown."""
 
     bg.add_task(_signals)
     return {"status": "queued"}
+
+
+# ═══════════════════════ Anthropic Agents ═══════════════════════
+
+@app.get("/api/v1/anthropic/agents")
+def get_anthropic_agents():
+    """Discover agents from the financial-services repository."""
+    agents = []
+    base_path = os.path.join(os.path.dirname(__file__), "financial-services", "plugins", "vertical-plugins")
+    if not os.path.exists(base_path):
+        return []
+    
+    for folder in os.listdir(base_path):
+        folder_path = os.path.join(base_path, folder)
+        if not os.path.isdir(folder_path):
+            continue
+            
+        # Try to find plugin.json in .claude-plugin or root of the folder
+        plugin_json_paths = [
+            os.path.join(folder_path, ".claude-plugin", "plugin.json"),
+            os.path.join(folder_path, "plugin.json")
+        ]
+        
+        for p in plugin_json_paths:
+            if os.path.exists(p):
+                try:
+                    with open(p, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        agents.append({
+                            "id": folder,
+                            "name": data.get("name", folder.replace("-", " ").title()),
+                            "description": data.get("description", ""),
+                            "version": data.get("version", "0.1.0"),
+                        })
+                    break
+                except Exception as e:
+                    _log.error(f"Error reading plugin.json in {folder}: {e}")
+    return agents
 
 
 # ═══════════════════════ Activity ═══════════════════════

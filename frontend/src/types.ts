@@ -9,7 +9,8 @@ export type View =
   | "scenarios"
   | "predictions"
   | "export"
-  | "activity";
+  | "activity"
+  | "anthropic_agents";
 
 export interface Stock {
   ticker: string;
