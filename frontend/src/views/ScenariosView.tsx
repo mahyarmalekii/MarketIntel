@@ -134,6 +134,13 @@ export function ScenariosView({ api }: { api: ApiFetch }) {
               <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--ink-2)", marginBottom: 14 }}>{liveResult.summary}</p>
             )}
 
+            {(liveResult as any).news_catalysts && (
+              <div style={{ marginBottom: 12, padding: 12, background: "rgba(91,140,68,0.08)", borderRadius: 8, border: "1px solid var(--green)" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--green)", textTransform: "uppercase", marginBottom: 4 }}>News Catalysts</div>
+                <div style={{ fontSize: 12.5, color: "var(--ink-2)", lineHeight: 1.5 }}>{(liveResult as any).news_catalysts}</div>
+              </div>
+            )}
+
             {liveResult.affected_sectors?.length > 0 && (
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", marginBottom: 6 }}>Affected Sectors</div>
@@ -145,10 +152,24 @@ export function ScenariosView({ api }: { api: ApiFetch }) {
               </div>
             )}
 
+            {(liveResult as any).sector_rotation && (
+              <div style={{ marginBottom: 12, padding: 12, background: "var(--paper-2)", borderRadius: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--blue)", textTransform: "uppercase", marginBottom: 4 }}>Sector Rotation</div>
+                <div style={{ fontSize: 12.5, color: "var(--ink-2)", lineHeight: 1.5 }}>{(liveResult as any).sector_rotation}</div>
+              </div>
+            )}
+
+            {(liveResult as any).hedge_recommendations && (
+              <div style={{ marginBottom: 12, padding: 12, background: "var(--bad-soft)", borderRadius: 8, border: "1px solid var(--bad)" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--bad)", textTransform: "uppercase", marginBottom: 4 }}>Hedge Recommendations</div>
+                <div style={{ fontSize: 12.5, color: "var(--ink-2)", lineHeight: 1.5 }}>{(liveResult as any).hedge_recommendations}</div>
+              </div>
+            )}
+
             {liveResult.per_stock && liveResult.per_stock.length > 0 && (
               <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", marginBottom: 8 }}>Per-Stock Impact</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", marginBottom: 8 }}>Per-Stock Impact & Peer Comparison</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 8 }}>
                   {liveResult.per_stock.map((s: any) => (
                     <div key={s.ticker} style={{ background: "var(--paper-2)", borderRadius: 8, padding: "10px 12px" }}>
                       <div className="row gap-2" style={{ marginBottom: 4 }}>
@@ -158,6 +179,16 @@ export function ScenariosView({ api }: { api: ApiFetch }) {
                         </span>
                       </div>
                       <div style={{ fontSize: 11.5, color: "var(--ink-2)", lineHeight: 1.4 }}>{s.reasoning}</div>
+                      {s.news_link && (
+                        <div style={{ fontSize: 10.5, color: "var(--green)", marginTop: 4 }}>
+                          News: {s.news_link}
+                        </div>
+                      )}
+                      {s.peer_comparison && (
+                        <div style={{ fontSize: 10.5, color: "var(--blue)", marginTop: 4, fontStyle: "italic" }}>
+                          Peers: {s.peer_comparison}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

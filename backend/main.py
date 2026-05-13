@@ -786,24 +786,84 @@ async def _scenario_task(name: str, description: str):
                       "msg": f"Running scenario: {name}..."})
     try:
         holdings = db.get_holdings()
-        if not holdings:
-            await _broadcast({"type": "agent", "event": "scenario_error",
-                               "msg": "Add holdings first"})
-            return
+        if holdings:
+            stocks_text = "\n".join(
+                f"- {h['ticker']}: {h['shares']} shares @ ${h['avg_cost']:.2f}"
+                for h in holdings[:12]
+            )
+            portfolio_label = "USER PORTFOLIO"
+        else:
+            # No holdings — use a representative market basket for analysis
+            default_universe = [
+                ("AAPL", "Apple", "Technology"), ("NVDA", "NVIDIA", "Semiconductors"),
+                ("MSFT", "Microsoft", "Technology"), ("GOOGL", "Alphabet", "Technology"),
+                ("AMZN", "Amazon", "Consumer Cyclical"), ("JPM", "JP Morgan", "Financials"),
+                ("XOM", "Exxon Mobil", "Energy"), ("JNJ", "Johnson & Johnson", "Healthcare"),
+                ("TSLA", "Tesla", "Auto/EV"), ("SNDL", "Sundial Growers", "Cannabis/Penny"),
+                ("AMC", "AMC Entertainment", "Entertainment/Penny"), ("PLTR", "Palantir", "AI/Defense"),
+            ]
+            stocks_text = "\n".join(
+                f"- {t}: {n} ({s})" for t, n, s in default_universe
+            )
+            portfolio_label = "REFERENCE MARKET BASKET (user has no holdings yet)"
 
-        stocks_text = "\n".join(
-            f"- {h['ticker']}: {h['shares']} shares @ ${h['avg_cost']:.2f}"
-            for h in holdings[:12]
-        )
+        # Fetch live news + prediction signals to ground the analysis
+        news = db.get_news(limit=20)
+        news_text = "\n".join(
+            f"- [{n.get('sentiment','neutral')}] {n.get('title','')} ({n.get('source','')})"
+            for n in news[:15]
+        ) or "No recent news available."
+
+        # Try to get prediction market signals for extra context
+        pred_text = ""
+        try:
+            pred_markets = await pred.fetch_all(10)
+            if pred_markets:
+                pred_text = "\n".join(
+                    f"- {m['question']} → YES {m['yes_price']}% ({m['platform']})"
+                    for m in pred_markets[:8]
+                )
+        except Exception:
+            pred_text = ""
+
         system = (
-            "You are a portfolio risk analyst. Analyse portfolio performance under macro scenarios. "
-            "Return ONLY valid JSON — no markdown, no prose outside the JSON."
+            "You are a hyper-specialized macro risk analyst at a Tier-1 quantitative hedge fund. "
+            "You model scenario impacts with extreme precision, including peer group comparisons, "
+            "sector rotation effects, and second-order consequences. "
+            "CRITICAL: You must use the LIVE NEWS HEADLINES and PREDICTION MARKET SIGNALS provided below "
+            "to ground your analysis in current real-world events. Explain how specific current events "
+            "(e.g. oil price movements, Fed policy, earnings, geopolitical tensions, trade policy) "
+            "amplify or dampen the scenario's impact on each stock. Think like a senior junior analyst "
+            "at Goldman Sachs who connects dots across domains. "
+            "No emojis. Return ONLY valid JSON — no markdown, no prose outside the JSON."
         )
         user = (
-            f"Scenario: {name}\n{description}\n\nPortfolio:\n{stocks_text}\n\n"
-            'Return JSON: {"affected_sectors":["string"],"assumptions":"string",'
-            '"portfolio_impact_pct":number,"per_stock":[{"ticker":"","impact_pct":0,'
-            '"reasoning":""}],"summary":"string"}'
+            f"Scenario: {name}\n{description}\n\n"
+            f"{portfolio_label}:\n{stocks_text}\n\n"
+            f"LIVE NEWS HEADLINES (use these to ground your analysis):\n{news_text}\n\n"
+        )
+        if pred_text:
+            user += f"PREDICTION MARKET SIGNALS (use as leading indicators):\n{pred_text}\n\n"
+        user += (
+            'Return JSON with EXACTLY this structure:\n'
+            '{\n'
+            '  "affected_sectors": ["Technology", "Energy", "Financials"],\n'
+            '  "assumptions": "Detailed macro assumptions grounded in the live news above",\n'
+            '  "portfolio_impact_pct": -5.2,\n'
+            '  "news_catalysts": "Which specific news headlines above are most relevant to this scenario and why",\n'
+            '  "per_stock": [\n'
+            '    {\n'
+            '      "ticker": "AAPL",\n'
+            '      "impact_pct": -3.5,\n'
+            '      "peer_comparison": "Outperforms MSFT (-5.1%) and GOOGL (-4.8%) due to services revenue resilience",\n'
+            '      "news_link": "How a specific headline above directly affects this stock",\n'
+            '      "reasoning": "Specific fundamental reasoning for this stock under this scenario"\n'
+            '    }\n'
+            '  ],\n'
+            '  "sector_rotation": "Where capital flows TO and FROM under this scenario",\n'
+            '  "hedge_recommendations": "Specific hedging strategies (e.g., put spreads, sector ETFs, inverse ETFs)",\n'
+            '  "summary": "Comprehensive 3-4 sentence scenario analysis summary referencing current events"\n'
+            '}'
         )
 
         resp = call_raw_with_fallback(system, user)
