@@ -255,7 +255,16 @@ def _sentiment(text: str) -> str:
 
 # ──────────────────────── quotes ────────────────────────
 
+_quote_cache: dict[str, tuple[float, dict]] = {}   # ticker -> (timestamp, data)
+_CACHE_TTL = 300   # 5 minutes
+
+
 def get_quote(ticker: str) -> dict:
+    import time as _time
+    now = _time.time()
+    cached = _quote_cache.get(ticker)
+    if cached and (now - cached[0]) < _CACHE_TTL:
+        return cached[1]
     try:
         import yfinance as yf
         t = yf.Ticker(ticker)
@@ -265,7 +274,7 @@ def get_quote(ticker: str) -> dict:
             or info.get("regularMarketPrice")
             or info.get("previousClose")
         )
-        return {
+        result = {
             "ticker": ticker,
             "name": info.get("longName") or info.get("shortName", ""),
             "exchange": info.get("exchange", ""),
@@ -285,6 +294,8 @@ def get_quote(ticker: str) -> dict:
             "dividend_yield": info.get("dividendYield"),
             "description": (info.get("longBusinessSummary", "") or "")[:500],
         }
+        _quote_cache[ticker] = (now, result)
+        return result
     except Exception as e:
         _log.warning("get_quote %s: %s", ticker, e)
         return {"ticker": ticker, "error": str(e)}

@@ -4,6 +4,21 @@ import { getJson } from "../api";
 import { StatCard } from "../components/Topbar";
 import Icon from "../components/Icon";
 
+interface DailyPick {
+  ticker: string;
+  name: string;
+  action: string;
+  conviction: string;
+  entry_price: number;
+  target_price: number;
+  stop_loss: number;
+  time_horizon: string;
+  risk_level: string;
+  category: string;
+  sector: string;
+  rationale: string;
+}
+
 export function DashboardView({ api, logs, setView }: {
   api: ApiFetch;
   logs: LogLine[];
@@ -12,20 +27,24 @@ export function DashboardView({ api, logs, setView }: {
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
+  const [picks, setPicks] = useState<DailyPick[]>([]);
+  const [picksLoading, setPicksLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [p, n, i] = await Promise.all([
+      const [p, n, i, pk] = await Promise.all([
         getJson<PortfolioSummary>(api, "/api/v1/portfolio"),
         getJson<NewsItem[]>(api, "/api/v1/news?limit=6"),
         getJson<Insight[]>(api, "/api/v1/insights?limit=5"),
+        getJson<{ picks: DailyPick[]; generated_at: number }>(api, "/api/v1/picks"),
       ]);
       setPortfolio(p);
       setNews(n);
       setInsights(i);
+      setPicks(pk.picks || []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load dashboard");
     }
@@ -33,12 +52,36 @@ export function DashboardView({ api, logs, setView }: {
 
   useEffect(() => { load(); }, [load]);
 
+  // Poll picks every 10s until they arrive (they generate on startup in background)
+  useEffect(() => {
+    if (picks.length > 0) return;
+    const t = setInterval(async () => {
+      try {
+        const pk = await getJson<{ picks: DailyPick[] }>(api, "/api/v1/picks");
+        if (pk.picks?.length) { setPicks(pk.picks); clearInterval(t); }
+      } catch { /* ignore */ }
+    }, 10000);
+    return () => clearInterval(t);
+  }, [api, picks.length]);
+
   const refreshNews = async () => {
     setRefreshing(true);
     await api("/api/v1/news/refresh", { method: "POST" });
     const h = () => { setRefreshing(false); load(); window.removeEventListener("news-refresh-done", h); };
     window.addEventListener("news-refresh-done", h);
     setTimeout(() => setRefreshing(false), 30000);
+  };
+
+  const refreshPicks = async () => {
+    setPicksLoading(true);
+    await api("/api/v1/picks/refresh", { method: "POST" });
+    const poll = setInterval(async () => {
+      try {
+        const pk = await getJson<{ picks: DailyPick[] }>(api, "/api/v1/picks");
+        if (pk.picks?.length) { setPicks(pk.picks); setPicksLoading(false); clearInterval(poll); }
+      } catch { /* ignore */ }
+    }, 5000);
+    setTimeout(() => { setPicksLoading(false); clearInterval(poll); }, 120000);
   };
 
   const pnl = portfolio?.total_pnl ?? 0;
@@ -74,6 +117,83 @@ export function DashboardView({ api, logs, setView }: {
           <StatCard tone="purple" icon="layers" label="Positions" value={portfolio?.holdings.length ?? 0} sub="across US · EU · UK" />
           <StatCard tone="orange" icon="newspaper" label="News Items" value={news.length} sub="latest in feed" />
           <StatCard tone="teal" icon="spark" label="AI Insights" value={insights.length} sub="generated" />
+        </div>
+
+        {/* ═══ TODAY'S STOCK PICKS ═══ */}
+        <div className="card" style={{ padding: 20, border: "1px solid var(--green)", background: "linear-gradient(135deg, rgba(91,140,68,0.06) 0%, transparent 100%)" }}>
+          <div className="row" style={{ justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.02em" }}>Today's Stock Picks</div>
+              <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>AI-generated daily recommendations · auto-refreshes every 6h</div>
+            </div>
+            <button className="btn btn-sm" onClick={refreshPicks} disabled={picksLoading}>
+              <Icon name="refresh" size={12} /> {picksLoading ? "Generating..." : "Refresh Picks"}
+            </button>
+          </div>
+          {picks.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 20, color: "var(--ink-3)" }}>
+              <div className="spinner" style={{ margin: "0 auto 10px auto" }} />
+              <div style={{ fontSize: 13 }}>Generating today's picks... this runs automatically on startup.</div>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
+              {picks.map((pick, i) => {
+                const catColor = pick.category?.includes("penny") || pick.category?.includes("speculative")
+                  ? "var(--pink)" : pick.category?.includes("growth") || pick.category?.includes("momentum")
+                  ? "var(--orange)" : "var(--green)";
+                const upside = pick.entry_price ? ((pick.target_price - pick.entry_price) / pick.entry_price * 100).toFixed(1) : "?";
+                return (
+                  <div key={i} style={{
+                    background: "var(--card)", borderRadius: 10, padding: 16,
+                    border: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 10,
+                  }}>
+                    <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                      <div className="row gap-2" style={{ alignItems: "center" }}>
+                        <span style={{ fontWeight: 800, fontSize: 15 }}>{pick.ticker}</span>
+                        <span style={{
+                          fontSize: 9.5, fontWeight: 700, padding: "2px 7px", borderRadius: 999,
+                          background: catColor + "22", color: catColor, textTransform: "uppercase", letterSpacing: "0.06em",
+                        }}>{pick.category || "equity"}</span>
+                      </div>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999,
+                        background: pick.conviction === "HIGH" ? "var(--green-soft)" : "var(--yellow-soft)",
+                        color: pick.conviction === "HIGH" ? "var(--green-ink)" : "var(--yellow-ink)",
+                        textTransform: "uppercase",
+                      }}>{pick.action} · {pick.conviction}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--ink-2)" }}>{pick.name} · {pick.sector}</div>
+                    <div className="row gap-3" style={{ fontSize: 12 }}>
+                      <div className="col" style={{ gap: 2 }}>
+                        <span style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase" }}>Entry</span>
+                        <span className="mono" style={{ fontWeight: 600 }}>${pick.entry_price?.toFixed(2)}</span>
+                      </div>
+                      <div className="col" style={{ gap: 2 }}>
+                        <span style={{ fontSize: 10, color: "var(--ok)", textTransform: "uppercase" }}>Target</span>
+                        <span className="mono" style={{ fontWeight: 600, color: "var(--ok)" }}>${pick.target_price?.toFixed(2)}</span>
+                      </div>
+                      <div className="col" style={{ gap: 2 }}>
+                        <span style={{ fontSize: 10, color: "var(--bad)", textTransform: "uppercase" }}>Stop-Loss</span>
+                        <span className="mono" style={{ fontWeight: 600, color: "var(--bad)" }}>${pick.stop_loss?.toFixed(2)}</span>
+                      </div>
+                      <div className="col" style={{ gap: 2 }}>
+                        <span style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase" }}>Upside</span>
+                        <span className="mono" style={{ fontWeight: 600, color: "var(--ok)" }}>+{upside}%</span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11.5, color: "var(--ink-2)", lineHeight: 1.5, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+                      {pick.rationale?.slice(0, 180)}{(pick.rationale?.length ?? 0) > 180 ? "…" : ""}
+                    </div>
+                    <div className="row gap-2" style={{ fontSize: 10, color: "var(--ink-3)" }}>
+                      <span>{pick.time_horizon}</span>
+                      <span>·</span>
+                      <span>Risk: {pick.risk_level}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Region allocation */}

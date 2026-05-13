@@ -138,7 +138,10 @@ async def lifespan(app: FastAPI):
     db.init_db()
     _log.info("DB ready at %s", db.DB_PATH)
     _sched.add_job(_auto_news, "interval", hours=1, id="auto_news")
+    _sched.add_job(_generate_picks, "interval", hours=6, id="auto_picks")
     _sched.start()
+    # Auto-generate picks on startup (in background so server starts fast)
+    asyncio.get_event_loop().create_task(_generate_picks())
     yield
     _sched.shutdown(wait=False)
 
@@ -303,7 +306,12 @@ def portfolio():
     enriched = []
     total_value = total_cost = 0.0
     for h in holdings:
-        q = mkt.get_quote(h["ticker"])
+        # Try cached DB data first for speed, fall back to live quote
+        cached = db.get_stock(h["ticker"])
+        if cached and cached.get("last_price"):
+            q = cached
+        else:
+            q = mkt.get_quote(h["ticker"])
         price = q.get("last_price") or h["avg_cost"]
         value = price * h["shares"]
         cost = h["avg_cost"] * h["shares"]
@@ -335,6 +343,97 @@ def portfolio():
         "total_pnl": round(total_pnl, 2),
         "total_pnl_pct": round(total_pnl / total_cost * 100, 2) if total_cost else 0,
     }
+
+
+# ═══════════════════════ Daily Stock Picks (Auto-Suggestions) ═══════════════════════
+
+_daily_picks: list[dict] = []
+_picks_generated_at: float = 0
+
+
+@app.get("/api/v1/picks")
+def get_picks():
+    """Return cached daily stock picks instantly."""
+    return {"picks": _daily_picks, "generated_at": _picks_generated_at}
+
+
+@app.post("/api/v1/picks/refresh")
+async def refresh_picks(bg: BackgroundTasks):
+    bg.add_task(_generate_picks)
+    return {"status": "queued"}
+
+
+async def _generate_picks():
+    global _daily_picks, _picks_generated_at
+    await _broadcast({"type": "agent", "event": "picks_start", "msg": "Scanning markets for today's top stock picks..."})
+    try:
+        # Quick scan: grab a handful of tickers from each category
+        hot_tickers = ["NVDA", "AAPL", "TSLA", "AMD", "META", "GOOGL", "AMZN", "MSFT",
+                        "JPM", "V", "AVGO", "CRM", "NFLX", "COST", "XOM",
+                        "SNDL", "AMC", "CLOV", "PLTR", "SOFI", "RIVN", "LCID",
+                        "SAP.DE", "ASML.AS", "SHEL.L", "AZN.L"]
+        
+        # Fetch quotes in parallel-ish (cache will help on repeats)
+        quick_data = []
+        for t in hot_tickers[:20]:
+            q = mkt.get_quote(t)
+            if "error" not in q and q.get("last_price"):
+                hist = mkt.get_history(t, "1mo")
+                mom = "N/A"
+                if len(hist) >= 2:
+                    pct = (hist[-1]["close"] - hist[0]["close"]) / hist[0]["close"] * 100
+                    mom = f"{pct:+.1f}%"
+                quick_data.append({
+                    "ticker": t, "name": q.get("name"), "price": q.get("last_price"),
+                    "sector": q.get("sector", ""), "cap": q.get("market_cap_tier", ""),
+                    "pe": q.get("pe_ratio", "N/A"), "beta": q.get("beta", "N/A"),
+                    "mom_1mo": mom,
+                })
+
+        data_text = "\n".join(
+            f"{d['ticker']} ({d['name']}): {d['sector']} | Cap: {d['cap']} | ${d['price']} | PE: {d['pe']} | Beta: {d['beta']} | 1mo: {d['mom_1mo']}"
+            for d in quick_data
+        )
+
+        system = (
+            "You are an elite, hyper-specialized equity strategist at a Tier-1 quantitative hedge fund. "
+            "You provide SPECIFIC, ACTIONABLE daily stock picks — not generic advice. "
+            "Include a mix of blue-chips, growth stocks, AND penny/micro-cap plays. "
+            "For each pick, give a precise entry price, target price, stop-loss, and time horizon. "
+            "Use advanced terminology. No emojis. Respond ONLY with valid JSON array."
+        )
+        user = (
+            f"Based on this LIVE market data, give me exactly 6 stock picks for today.\n\n"
+            f"LIVE DATA:\n{data_text}\n\n"
+            f"Include:\n"
+            f"- 2 large-cap conviction plays (blue-chip or mega-cap)\n"
+            f"- 2 growth/momentum plays (mid-cap, high-beta)\n"
+            f"- 2 speculative/penny stock plays (micro-cap, high risk/reward)\n\n"
+            f'Return JSON array:\n'
+            f'[{{"ticker":"NVDA","name":"NVIDIA Corp","action":"BUY","conviction":"HIGH",'
+            f'"entry_price":130.0,"target_price":155.0,"stop_loss":118.0,'
+            f'"time_horizon":"2-4 weeks","risk_level":"Medium",'
+            f'"category":"large-cap","sector":"Semiconductors",'
+            f'"rationale":"Specific technical and fundamental reasoning here"}}]'
+        )
+
+        resp = call_raw_with_fallback(system, user)
+        match = re.search(r'\[.*\]', resp, re.DOTALL)
+        if match:
+            picks = json.loads(match.group())
+            _daily_picks = picks
+            _picks_generated_at = time.time()
+            db.log_activity(f"Generated {len(picks)} daily stock picks", "picks", "agent")
+            await _broadcast({
+                "type": "agent", "event": "picks_done",
+                "msg": f"Generated {len(picks)} daily stock picks",
+                "data": picks,
+            })
+        else:
+            raise ValueError("AI returned no valid picks JSON")
+    except Exception as e:
+        _log.error("picks: %s", e)
+        await _broadcast({"type": "agent", "event": "picks_error", "msg": str(e)})
 
 
 @app.post("/api/v1/portfolio/holding")
