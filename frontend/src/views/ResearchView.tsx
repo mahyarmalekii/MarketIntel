@@ -165,8 +165,8 @@ export function ResearchView({ api, initialTicker }: { api: ApiFetch; initialTic
                       style={{ background: "var(--ink)", color: "var(--paper)" }}>
                 <Icon name="spark" size={13} /> {generating ? "Analysing…" : "AI Insight"}
               </button>
-              <button className="btn" onClick={runCrewAI} disabled={!ticker} title="Run CrewAI multi-agent analysis">
-                <Icon name="bolt" size={13} /> CrewAI
+              <button className="btn" onClick={runCrewAI} disabled={!ticker} title="Run multi-agent analysis">
+                <Icon name="bolt" size={13} /> Multi-Agent Research
               </button>
             </div>
           </div>

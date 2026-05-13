@@ -10,7 +10,9 @@ export type View =
   | "predictions"
   | "export"
   | "activity"
-  | "anthropic_agents";
+  | "anthropic_agents"
+  | "crypto"
+  | "forex";
 
 export interface Stock {
   ticker: string;

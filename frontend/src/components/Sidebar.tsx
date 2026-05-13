@@ -11,7 +11,9 @@ const NAV = [
   { id: "predictions", label: "Predictions",  icon: "bolt",     tone: "pink"   },
   { id: "export",      label: "Export",       icon: "download", tone: "pink"   },
   { id: "activity",    label: "Activity",     icon: "pulse",    tone: "orange" },
-  { id: "anthropic_agents", label: "Anthropic Agents", icon: "spark", tone: "purple" },
+  { id: "anthropic_agents", label: "AI Bots", icon: "spark", tone: "purple" },
+  { id: "crypto",      label: "Crypto",       icon: "database", tone: "yellow" },
+  { id: "forex",       label: "Forex",        icon: "globe",    tone: "blue"   },
 ] as const;
 
 export function Sidebar({ view, setView, online, port, beat, onSettings }: {

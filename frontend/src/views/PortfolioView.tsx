@@ -135,7 +135,7 @@ export function PortfolioView({ api }: { api: ApiFetch }) {
               <Icon name="plus" size={14} /> Add Position
             </button>
             <button className="btn" onClick={() => { setShowAdd(false); setShowProposeConfig(s => !s); }}>
-              <Icon name="spark" size={14} /> AI Propose
+              <Icon name="spark" size={14} /> AI Suggestions
             </button>
             <button className="btn btn-icon" onClick={load} title="Refresh">
               <Icon name="refresh" size={14} />
@@ -189,7 +189,7 @@ export function PortfolioView({ api }: { api: ApiFetch }) {
         {/* Propose Config Form */}
         {showProposeConfig && (
           <div className="card" style={{ padding: 20 }}>
-            <div className="eyebrow" style={{ marginBottom: 14 }}>Junior Analyst Parameters</div>
+            <div className="eyebrow" style={{ marginBottom: 14 }}>AI Settings</div>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div style={{ flex: 1, minWidth: 120 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Budget</div>
@@ -216,7 +216,7 @@ export function PortfolioView({ api }: { api: ApiFetch }) {
                       style={{ background: "var(--primary-container)", color: "#000", borderColor: "var(--primary-container)", fontWeight: 700, padding: "0 24px", height: 38 }}
                       onClick={() => { setShowProposeConfig(false); proposePortfolio(); }} 
                       disabled={proposing}>
-                {proposing ? "Running Pipeline..." : "Run Junior Analyst"}
+                {proposing ? "Running Pipeline..." : "Run AI Pipeline"}
               </button>
             </div>
           </div>

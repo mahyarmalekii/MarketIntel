@@ -17,6 +17,8 @@ import { PredictionsView } from "./views/PredictionsView";
 import { ExportView } from "./views/ExportView";
 import { ActivityView } from "./views/ActivityView";
 import { AnthropicAgentsView } from "./views/AnthropicAgentsView";
+import { CryptoView } from "./views/CryptoView";
+import { ForexView } from "./views/ForexView";
 
 // Backend URL: "" means same origin (proxy in dev, same-host in production)
 const BACKEND_HTTP = import.meta.env.VITE_BACKEND_URL ?? "";
@@ -140,6 +142,16 @@ export default function App() {
           {view === "anthropic_agents" && (
             <ErrorBoundary label="Anthropic Agents">
               <AnthropicAgentsView api={api} />
+            </ErrorBoundary>
+          )}
+          {view === "crypto" && (
+            <ErrorBoundary label="Crypto">
+              <CryptoView api={api} />
+            </ErrorBoundary>
+          )}
+          {view === "forex" && (
+            <ErrorBoundary label="Forex">
+              <ForexView api={api} />
             </ErrorBoundary>
           )}
         </div>
