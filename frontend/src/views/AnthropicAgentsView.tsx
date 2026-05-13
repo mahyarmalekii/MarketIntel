@@ -54,8 +54,27 @@ export function AnthropicAgentsView({ api }: { api: ApiFetch }) {
                 {agent.description}
               </div>
               <div className="row gap-2" style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--line)" }}>
-                <button className="btn btn-outline" style={{ flex: 1 }}>View Details</button>
-                <button className="btn btn-primary" style={{ flex: 1 }}>Run Agent</button>
+                <button 
+                  className="btn btn-outline" 
+                  style={{ flex: 1 }}
+                  onClick={() => alert(`Details for ${agent.name} are coming soon!`)}
+                >
+                  View Details
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    alert(`Starting agent: ${agent.name}... Check Activity feed.`);
+                    api(`/api/v1/anthropic/agents/${agent.id}/run`, { 
+                      method: "POST", 
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ query: "Analyze current market conditions" }) 
+                    }).catch(e => console.error(e));
+                  }}
+                >
+                  Run Agent
+                </button>
               </div>
             </div>
           ))}

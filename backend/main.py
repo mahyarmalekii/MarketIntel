@@ -1289,6 +1289,24 @@ def get_anthropic_agents():
     return agents
 
 
+class RunAgentBody(BaseModel):
+    query: str = "Analyze current market conditions"
+
+@app.post("/api/v1/anthropic/agents/{agent_id}/run")
+async def run_anthropic_agent(agent_id: str, body: RunAgentBody, bg: BackgroundTasks):
+    async def _run_agent():
+        await _broadcast({"type": "agent", "event": "anthropic_agent_start", "msg": f"Starting Anthropic Agent: {agent_id}..."})
+        try:
+            # Stub logic for now
+            await asyncio.sleep(2)
+            await _broadcast({"type": "agent", "event": "anthropic_agent_done", "msg": f"Agent {agent_id} completed task: {body.query}"})
+        except Exception as e:
+            await _broadcast({"type": "agent", "event": "anthropic_agent_error", "msg": str(e)})
+            
+    bg.add_task(_run_agent)
+    return {"status": "queued"}
+
+
 # ═══════════════════════ Activity ═══════════════════════
 
 @app.get("/api/v1/activity")
