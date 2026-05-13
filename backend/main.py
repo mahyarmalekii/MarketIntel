@@ -8,7 +8,6 @@ PORT            int     TCP port to listen on (default: 2860 locally, Railway se
 API_SECRET      str     When set, used as the WS/auth token instead of generating one.
                         Set this on your hosting provider for security.
 DATABASE_URL    str     Path to SQLite file (default: ./data/market.db)
-                        For PostgreSQL pass a postgres:// URI (future).
 ALLOWED_ORIGINS str     Comma-separated CORS origins, default "*"
 """
 import asyncio
@@ -18,8 +17,6 @@ import re
 import secrets
 import socket
 import time
-import webbrowser
-import threading
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -142,12 +139,6 @@ async def lifespan(app: FastAPI):
     _log.info("DB ready at %s", db.DB_PATH)
     _sched.add_job(_auto_news, "interval", hours=1, id="auto_news")
     _sched.start()
-    
-    def open_browser():
-        time.sleep(2)
-        webbrowser.open("http://localhost:5173")
-    
-    threading.Thread(target=open_browser, daemon=True).start()
     yield
     _sched.shutdown(wait=False)
 
