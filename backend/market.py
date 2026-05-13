@@ -457,3 +457,196 @@ def fetch_x_news(nitter_instance: str, accounts: list[str] | None = None) -> lis
 
     _log.info("X nitter: fetched %d posts from %d accounts", len(items), len(accs))
     return items
+
+
+# ──────────────────────── technical analysis ────────────────────────
+
+def _sma(values: list[float], n: int) -> list[float | None]:
+    """Simple Moving Average over a list of floats. Returns None where insufficient data."""
+    result: list[float | None] = []
+    for i in range(len(values)):
+        if i < n - 1:
+            result.append(None)
+        else:
+            result.append(sum(values[i - n + 1: i + 1]) / n)
+    return result
+
+
+def _ema(values: list[float], n: int) -> list[float | None]:
+    """Exponential Moving Average. Seeded from first close, alpha=2/(n+1).
+    Returns None for the first n-1 bars so the seed stabilises."""
+    if not values:
+        return []
+    alpha = 2.0 / (n + 1)
+    result: list[float | None] = [None] * (n - 1)
+    ema = values[0]
+    # Walk through all values but only emit after the warm-up window
+    for i in range(1, len(values)):
+        ema = alpha * values[i] + (1 - alpha) * ema
+        if i >= n - 1:
+            result.append(round(ema, 4))
+    # Edge: if list shorter than n
+    if len(result) < len(values):
+        result = [None] * len(values)
+        ema = values[0]
+        for i in range(1, len(values)):
+            ema = alpha * values[i] + (1 - alpha) * ema
+            result[i] = round(ema, 4)
+        # Mask the first n-1 entries
+        for i in range(min(n - 1, len(result))):
+            result[i] = None
+    return result
+
+
+def _rsi(closes: list[float], period: int = 14) -> list[float | None]:
+    """Wilder's smoothed RSI(14). Returns None where insufficient data."""
+    result: list[float | None] = [None] * len(closes)
+    if len(closes) < period + 1:
+        return result
+
+    gains: list[float] = []
+    losses: list[float] = []
+    for i in range(1, len(closes)):
+        diff = closes[i] - closes[i - 1]
+        gains.append(max(diff, 0.0))
+        losses.append(max(-diff, 0.0))
+
+    # Seed: simple average of first `period` gains/losses
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+
+    def _rsi_val(ag: float, al: float) -> float:
+        if al == 0:
+            return 100.0
+        rs = ag / al
+        return round(100 - (100 / (1 + rs)), 4)
+
+    result[period] = _rsi_val(avg_gain, avg_loss)
+
+    # Wilder smoothing
+    for i in range(period + 1, len(closes)):
+        idx = i - 1  # index into gains/losses (which start at diff[1])
+        avg_gain = (avg_gain * (period - 1) + gains[idx]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[idx]) / period
+        result[i] = _rsi_val(avg_gain, avg_loss)
+
+    return result
+
+
+def _bollinger(closes: list[float], n: int = 20, k: float = 2.0):
+    """Bollinger Bands(n, k). Returns (upper, mid, lower) lists."""
+    upper: list[float | None] = []
+    mid: list[float | None] = []
+    lower: list[float | None] = []
+    for i in range(len(closes)):
+        if i < n - 1:
+            upper.append(None)
+            mid.append(None)
+            lower.append(None)
+        else:
+            window = closes[i - n + 1: i + 1]
+            m = sum(window) / n
+            variance = sum((x - m) ** 2 for x in window) / n
+            std = variance ** 0.5
+            upper.append(round(m + k * std, 4))
+            mid.append(round(m, 4))
+            lower.append(round(m - k * std, 4))
+    return upper, mid, lower
+
+
+def compute_technicals(ticker: str, period: str = "3mo") -> dict:
+    """Compute technical indicators for a ticker and period.
+
+    Returns:
+        {
+            "bars": [ { ...ohlcv, sma20, sma50, ema12, ema26, rsi,
+                        macd, macd_signal, macd_hist,
+                        bb_upper, bb_lower, bb_mid }, ... ],
+            "summary": { rsi, rsi_signal, trend, macd, macd_signal_val, sma20, sma50 }
+        }
+    """
+    bars = get_history(ticker, period)
+    if not bars:
+        return {"bars": [], "summary": {}}
+
+    closes = [b["close"] for b in bars]
+    n = len(closes)
+
+    sma20_list = _sma(closes, 20)
+    sma50_list = _sma(closes, 50)
+    ema12_list = _ema(closes, 12)
+    ema26_list = _ema(closes, 26)
+    rsi_list   = _rsi(closes, 14)
+    bb_upper, bb_mid, bb_lower = _bollinger(closes, 20, 2.0)
+
+    # MACD = ema12 - ema26; only where both are non-None
+    macd_vals: list[float | None] = []
+    for e12, e26 in zip(ema12_list, ema26_list):
+        if e12 is not None and e26 is not None:
+            macd_vals.append(round(e12 - e26, 4))
+        else:
+            macd_vals.append(None)
+
+    # Signal = EMA(9) of MACD values (using only the non-None portion)
+    # Build a dense list for EMA computation
+    macd_dense = [v for v in macd_vals if v is not None]
+    macd_signal_dense = _ema(macd_dense, 9) if macd_dense else []
+
+    # Map back to full-length list
+    macd_signal_full: list[float | None] = [None] * n
+    dense_idx = 0
+    for i in range(n):
+        if macd_vals[i] is not None:
+            if dense_idx < len(macd_signal_dense):
+                macd_signal_full[i] = macd_signal_dense[dense_idx]
+            dense_idx += 1
+
+    macd_hist_full: list[float | None] = []
+    for mv, sv in zip(macd_vals, macd_signal_full):
+        if mv is not None and sv is not None:
+            macd_hist_full.append(round(mv - sv, 4))
+        else:
+            macd_hist_full.append(None)
+
+    # Augment bars
+    for i, bar in enumerate(bars):
+        bar["sma20"]       = sma20_list[i]
+        bar["sma50"]       = sma50_list[i]
+        bar["ema12"]       = ema12_list[i]
+        bar["ema26"]       = ema26_list[i]
+        bar["rsi"]         = rsi_list[i]
+        bar["macd"]        = macd_vals[i]
+        bar["macd_signal"] = macd_signal_full[i]
+        bar["macd_hist"]   = macd_hist_full[i]
+        bar["bb_upper"]    = bb_upper[i]
+        bar["bb_lower"]    = bb_lower[i]
+        bar["bb_mid"]      = bb_mid[i]
+
+    # Summary from the last bar
+    last = bars[-1]
+    rsi_val = last.get("rsi")
+    if rsi_val is not None:
+        if rsi_val > 70:
+            rsi_signal = "overbought"
+        elif rsi_val < 30:
+            rsi_signal = "oversold"
+        else:
+            rsi_signal = "neutral"
+    else:
+        rsi_signal = "neutral"
+
+    s20 = last.get("sma20")
+    s50 = last.get("sma50")
+    trend = "bullish" if (s20 is not None and s50 is not None and s20 > s50) else "bearish"
+
+    summary = {
+        "rsi":            rsi_val,
+        "rsi_signal":     rsi_signal,
+        "trend":          trend,
+        "macd":           last.get("macd"),
+        "macd_signal_val": last.get("macd_signal"),
+        "sma20":          s20,
+        "sma50":          s50,
+    }
+
+    return {"bars": bars, "summary": summary}

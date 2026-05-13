@@ -259,6 +259,11 @@ def history(ticker: str, period: str = "3mo"):
     return mkt.get_history(ticker.upper(), period)
 
 
+@app.get("/api/v1/market/technicals/{ticker}")
+def get_technicals(ticker: str, period: str = "3mo"):
+    return mkt.compute_technicals(ticker.upper(), period)
+
+
 @app.get("/api/v1/market/scan")
 def scan(region: str = "US", cap_tier: str | None = None):
     results = mkt.scan_region(region, cap_tier)

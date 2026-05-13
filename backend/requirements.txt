@@ -18,8 +18,8 @@ gspread>=6.1.0
 anthropic>=0.40.0
 openai>=1.50.0
 
-# Optional: structured outputs, CrewAI
-# instructor>=1.3.0
+# Structured outputs (required by llm.py)
+instructor>=1.3.0
 # crewai>=0.70.0
 
 # Production frontend serving

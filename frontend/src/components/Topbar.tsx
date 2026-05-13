@@ -10,7 +10,11 @@ const META: Record<View, { title: string; sub: string }> = {
   scenarios:   { title: "Scenario Analysis",  sub: "Bull, bear, macro stress-test your portfolio" },
   predictions: { title: "Prediction Markets", sub: "Polymarket & Kalshi — live odds, risk ratings, suggested bets" },
   export:      { title: "Export & Automate",  sub: "Excel, Google Sheets, n8n workflows, CrewAI" },
-  activity:    { title: "Activity Log",       sub: "Backend events and agent logs" },
+  activity:         { title: "Activity Log",       sub: "Backend events and agent logs" },
+  anthropic_agents: { title: "AI Bots",            sub: "Anthropic multi-agent workflows" },
+  crypto:           { title: "Crypto",             sub: "Cryptocurrency market data" },
+  forex:            { title: "Forex",              sub: "Foreign exchange rates" },
+  technical:        { title: "Technical Analysis", sub: "Price charts, indicators — RSI, MACD, Bollinger Bands, moving averages" },
 };
 
 export function Topbar({ view }: { view: View }) {

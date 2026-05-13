@@ -12,9 +12,11 @@ export type View =
   | "activity"
   | "anthropic_agents"
   | "crypto"
-  | "forex";
+  | "forex"
+  | "technical";
 
 export interface Stock {
+  error?: string;
   ticker: string;
   name: string;
   exchange: string;
