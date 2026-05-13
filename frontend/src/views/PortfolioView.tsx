@@ -9,11 +9,22 @@ export function PortfolioView({ api }: { api: ApiFetch }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [proposing, setProposing] = useState(false);
-  const [proposed, setProposed] = useState<any[]>([]);
+  const [proposed, setProposed] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("MI_proposed");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [showAdd, setShowAdd] = useState(false);
   const [showProposeConfig, setShowProposeConfig] = useState(false);
   const [form, setForm] = useState({ ticker: "", shares: "", avg_cost: "", region: "US", currency: "USD", notes: "" });
   const [proposeConfig, setProposeConfig] = useState({ budget: "10000", currency: "USD", industries: "" });
+
+  useEffect(() => {
+    localStorage.setItem("MI_proposed", JSON.stringify(proposed));
+  }, [proposed]);
 
   const load = useCallback(async () => {
     setLoading(true);

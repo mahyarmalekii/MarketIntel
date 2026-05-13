@@ -7,19 +7,33 @@ import Icon from "../components/Icon";
 const SCENARIOS = ["base", "bull", "bear"] as const;
 
 export function ResearchView({ api, initialTicker }: { api: ApiFetch; initialTicker?: string }) {
-  const [ticker, setTicker] = useState(initialTicker || "");
-  const [scenario, setScenario] = useState<"base" | "bull" | "bear">("base");
+  const [ticker, setTicker] = useState(() => initialTicker || localStorage.getItem("MI_ticker") || "");
+  const [scenario, setScenario] = useState<"base" | "bull" | "bear">(() => (localStorage.getItem("MI_scenario") as any) || "base");
   const [quote, setQuote] = useState<Stock | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [insights, setInsights] = useState<Insight[]>([]);
-  const [latestInsight, setLatestInsight] = useState<Insight & { bull_case?: string; bear_case?: string; key_risks?: string[]; conditional_strategy?: string } | null>(null);
+  const [latestInsight, setLatestInsight] = useState<Insight & { bull_case?: string; bear_case?: string; key_risks?: string[]; conditional_strategy?: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem("MI_latestInsight");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [pennyStocks, setPennyStocks] = useState<Stock[]>([]);
   const [pennyRegion, setPennyRegion] = useState("US");
   const [loadingPenny, setLoadingPenny] = useState(false);
   const [scanRegion, setScanRegion] = useState("US");
   const [scanResults, setScanResults] = useState<Stock[]>([]);
   const [scanning, setScanning] = useState(false);
+
+  useEffect(() => { localStorage.setItem("MI_ticker", ticker); }, [ticker]);
+  useEffect(() => { localStorage.setItem("MI_scenario", scenario); }, [scenario]);
+  useEffect(() => {
+    if (latestInsight) localStorage.setItem("MI_latestInsight", JSON.stringify(latestInsight));
+    else localStorage.removeItem("MI_latestInsight");
+  }, [latestInsight]);
 
   const loadInsights = useCallback(async (t?: string) => {
     const url = t ? `/api/v1/insights?ticker=${t}` : "/api/v1/insights?limit=20";
@@ -76,8 +90,11 @@ export function ResearchView({ api, initialTicker }: { api: ApiFetch; initialTic
       setTicker(initialTicker);
       lookupQuote(initialTicker);
       generate(initialTicker, "base");
+    } else if (ticker) {
+      // If we restored ticker from local storage but there's no initialTicker, let's look up the quote so it "starts where it closed"
+      lookupQuote(ticker);
     }
-  }, [initialTicker, lookupQuote, generate]);
+  }, [initialTicker]); // Intentionally omitting other deps to only run on mount or initialTicker change
 
 
   const deleteInsight = async (id: string) => {
