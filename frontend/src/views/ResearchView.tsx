@@ -13,7 +13,7 @@ export function ResearchView({ api }: { api: ApiFetch }) {
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [insights, setInsights] = useState<Insight[]>([]);
-  const [latestInsight, setLatestInsight] = useState<Insight & { bull_case?: string; bear_case?: string; key_risks?: string[] } | null>(null);
+  const [latestInsight, setLatestInsight] = useState<Insight & { bull_case?: string; bear_case?: string; key_risks?: string[]; conditional_strategy?: string } | null>(null);
   const [pennyStocks, setPennyStocks] = useState<Stock[]>([]);
   const [pennyRegion, setPennyRegion] = useState("US");
   const [loadingPenny, setLoadingPenny] = useState(false);
@@ -306,7 +306,7 @@ export function ResearchView({ api }: { api: ApiFetch }) {
 }
 
 function InsightCard({ insight: ins, onDelete, api }: {
-  insight: Insight & { bull_case?: string; bear_case?: string; key_risks?: string[] };
+  insight: Insight & { bull_case?: string; bear_case?: string; key_risks?: string[]; conditional_strategy?: string };
   onDelete: () => void;
   api: ApiFetch;
 }) {
@@ -355,6 +355,13 @@ function InsightCard({ insight: ins, onDelete, api }: {
           </div>
         )}
       </div>
+
+      {ins.conditional_strategy && (
+        <div style={{ marginBottom: 14, background: "rgba(91,140,68,0.08)", borderRadius: 8, border: "1px solid var(--green)", padding: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--green)", textTransform: "uppercase", marginBottom: 6 }}>If/Then Strategy</div>
+          <div style={{ fontSize: 12.5, color: "var(--ink-2)", lineHeight: 1.5 }}>{ins.conditional_strategy}</div>
+        </div>
+      )}
 
       {ins.key_risks && ins.key_risks.length > 0 && (
         <div style={{ marginBottom: 14 }}>

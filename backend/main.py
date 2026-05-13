@@ -396,11 +396,11 @@ async def _generate_picks():
         )
 
         system = (
-            "You are an elite, hyper-specialized equity strategist at a Tier-1 quantitative hedge fund. "
-            "You provide SPECIFIC, ACTIONABLE daily stock picks — not generic advice. "
+            "You are a brutally honest equity strategist who speaks plainly and directly. "
+            "You provide SPECIFIC, ACTIONABLE daily stock picks based on real events. "
             "Include a mix of blue-chips, growth stocks, AND penny/micro-cap plays. "
-            "For each pick, give a precise entry price, target price, stop-loss, and time horizon. "
-            "Use advanced terminology. No emojis. Respond ONLY with valid JSON array."
+            "Explain exactly why you are picking it using conditional logic (e.g., 'because of this news, if X happens buy more, if Y happens sell'). "
+            "Use plain, easy-to-understand English. No emojis. Respond ONLY with valid JSON array."
         )
         user = (
             f"Based on this LIVE market data, give me exactly 6 stock picks for today.\n\n"
@@ -414,7 +414,7 @@ async def _generate_picks():
             f'"entry_price":130.0,"target_price":155.0,"stop_loss":118.0,'
             f'"time_horizon":"2-4 weeks","risk_level":"Medium",'
             f'"category":"large-cap","sector":"Semiconductors",'
-            f'"rationale":"Specific technical and fundamental reasoning here"}}]'
+            f'"rationale":"Brutally honest, simple reasoning with if/then conditions based on current events"}}]'
         )
 
         resp = call_raw_with_fallback(system, user)
@@ -553,9 +553,10 @@ async def _propose_task(body: ProposeBody):
         )
 
         system_2 = (
-            "You are an elite, hyper-specialized Portfolio Manager at a Tier-1 Quantitative Hedge Fund. "
-            "You ignore generic retail advice and focus on highly specific, niche fundamental anomalies and structural tailwinds. "
-            "Provide rigorous, advanced institutional-grade modeling (e.g., specific multiples, idiosyncratic risks, exact technical levels). "
+            "You are a brutally honest Portfolio Manager at a Tier-1 Hedge Fund who speaks in plain, easy-to-understand English. "
+            "You ignore fluff and focus on exactly what is happening in the news and how it impacts the stocks. "
+            "Provide rigorous analysis but explain it simply. "
+            "Explicitly include conditional 'if/then' logic based on current news (e.g., 'Because of the recent AI chip news, I predict X. If X happens, sell at $200. If it fails, buy more at $150'). "
             "Build a high-conviction portfolio. Respond ONLY with a valid JSON array, no prose outside the JSON."
         )
         
@@ -577,18 +578,17 @@ async def _propose_task(body: ProposeBody):
         user_2 += (
             "Select 6-10 assets from the universe (or fewer if the Senior PM requested high liquidity/cash). "
             f"For each, allocate a specific {body.currency} amount.\n"
-            "Provide rigorous, institutional-grade reasoning in `detailed_analysis`, incorporating:\n"
-            "1. Fundamental Modeling: (P/E expansion, valuation multiples, sector tailwinds).\n"
-            "2. Technical Analysis: (TradingView-style price action, momentum, 52-week ranges).\n"
-            "3. Alternative Data & Geopolitics: Combine political and financial news to explain how macro/political events directly impact this asset.\n"
-            "4. Exit Strategy: Recommend a specific hold duration and price target to sell at, with bull/bear/base scenarios.\n\n"
+            "Provide a brutally honest, easy-to-understand reasoning in `detailed_analysis`, incorporating:\n"
+            "1. Plain English logic: Why this stock, and how the recent news directly impacts it.\n"
+            "2. Conditional Trading Plan: e.g., 'Because of X news, I predict Y. If Y happens, we sell. If it doesn't, we buy more.'\n"
+            "3. Exit Strategy: Recommend a specific hold duration and price target.\n\n"
             "Return JSON array format exactly:\n"
             '[{"ticker":"AAPL","allocation_amount":2500.0,"shares":13,"time_horizon":"6-12 months",'
             '"risk_level":"Medium","estimated_price":190.0,"action":"BUY",'
-            '"rationale":"Strong free cash flow...",'
+            '"rationale":"Brutally honest, simple summary here...",'
             '"target_price_bull":220.0,"target_price_base":200.0,"target_price_bear":165.0,'
-            '"exit_strategy":"Hold 6-12mo. Sell if price hits $220 (bull) or cut loss at $165 (bear). Re-evaluate at earnings.",'
-            '"detailed_analysis":"**Fundamental Modeling:** Trading at 25x FWD P/E... \\n\\n**Technical Analysis:** Breakout above 50-DMA... \\n\\n**Social Sentiment:** High retail interest... \\n\\n**Scenario Analysis:** Bull: $220 (+15%) if AI revenue accelerates. Base: $200 (+5%). Bear: $165 (-13%) on macro slowdown."}]'
+            '"exit_strategy":"Hold 6-12mo. If news X plays out, sell at $220. If not, buy more at $165.",'
+            '"detailed_analysis":"**The Real Story:** Plain English explanation of what is going on.\\n\\n**News Impact & Prediction:** Because of the recent AI news, I predict X will happen.\\n\\n**If/Then Strategy:** If X happens, sell. If it fails, buy more at $165."}]'
         )
 
         resp_2 = call_raw_with_fallback(system_2, user_2)
@@ -696,7 +696,10 @@ async def _insight_task(ticker: str, scenario: str):
             price_change = f"1-month change: {pct:+.1f}%"
 
         system = (
-            "You are a quantitative equity analyst. Give clear, actionable investment insights. "
+            "You are a brutally honest equity analyst who speaks plainly and directly. "
+            "Give clear, actionable investment insights based heavily on the provided news. "
+            "Use simple, easy-to-understand language. "
+            "Explicitly include conditional 'if/then' logic (e.g., 'Because of this news I predict X. If X happens, sell it. If X doesn't happen, buy more'). "
             "Return ONLY valid JSON — no markdown, no prose outside the JSON."
         )
         user = (
@@ -707,8 +710,10 @@ async def _insight_task(ticker: str, scenario: str):
             f"52w: {q.get('52w_low','?')} – {q.get('52w_high','?')}\n\n"
             "Recent news:\n" + "\n".join(n.get("title","") for n in news) + "\n\n"
             'Return JSON: {"action":"buy|hold|sell|watch","confidence":0-100,'
-            '"rationale":"2-3 sentences","target_price":number,'
-            '"bull_case":"string","bear_case":"string","key_risks":["string"]}'
+            '"rationale":"2-3 sentences of brutally honest reasoning based on the news, speaking easy",'
+            '"target_price":number,'
+            '"bull_case":"string","bear_case":"string","key_risks":["string"],'
+            '"conditional_strategy":"If X happens then sell, if Y happens then buy more"}'
         )
 
         resp = call_raw_with_fallback(system, user)
@@ -739,6 +744,7 @@ async def _insight_task(ticker: str, scenario: str):
                 "bull_case": data.get("bull_case", ""),
                 "bear_case": data.get("bear_case", ""),
                 "key_risks": data.get("key_risks", []),
+                "conditional_strategy": data.get("conditional_strategy", ""),
             },
         })
         # Notify on actionable signals (buy/sell) with decent confidence
