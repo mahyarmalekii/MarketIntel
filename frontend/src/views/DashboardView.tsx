@@ -146,6 +146,12 @@ export function DashboardView({ api, logs, setView }: {
                   <div key={i} style={{
                     background: "var(--card)", borderRadius: 10, padding: 16,
                     border: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 10,
+                    cursor: "pointer", transition: "border-color 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = "var(--green)"}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = "var(--line)"}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("navigate-research", { detail: { ticker: pick.ticker } }));
                   }}>
                     <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
                       <div className="row gap-2" style={{ alignItems: "center" }}>
@@ -287,7 +293,8 @@ export function DashboardView({ api, logs, setView }: {
                   : 5;
                 const riskColor = insightRisk <= 3 ? "#00b894" : insightRisk <= 5 ? "#fdcb6e" : "#e17055";
                 return (
-                <div key={ins.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+                <div key={ins.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)", cursor: "pointer" }}
+                     onClick={() => window.dispatchEvent(new CustomEvent("navigate-research", { detail: { ticker: ins.ticker } }))}>
                   <div className="row gap-2" style={{ alignItems: "center", marginBottom: 4, flexWrap: "wrap" }}>
                     <span style={{ fontWeight: 700, fontSize: 13 }}>{ins.ticker}</span>
                     <ActionBadge action={ins.action} />

@@ -36,6 +36,19 @@ export default function App() {
   const [view, setView] = useState<View>("dashboard");
   const [showSettings, setShowSettings] = useState(false);
   const [startupSeconds, setStartupSeconds] = useState(0);
+  const [researchTicker, setResearchTicker] = useState("");
+
+  useEffect(() => {
+    const h = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (d?.ticker) {
+        setResearchTicker(d.ticker);
+        setView("research");
+      }
+    };
+    window.addEventListener("navigate-research", h);
+    return () => window.removeEventListener("navigate-research", h);
+  }, []);
 
   useEffect(() => {
     if (api) return;
@@ -96,7 +109,7 @@ export default function App() {
           )}
           {view === "research" && (
             <ErrorBoundary label="Research">
-              <ResearchView api={api} />
+              <ResearchView api={api} initialTicker={researchTicker} />
             </ErrorBoundary>
           )}
           {view === "charts" && (

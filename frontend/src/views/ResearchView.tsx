@@ -6,8 +6,8 @@ import Icon from "../components/Icon";
 
 const SCENARIOS = ["base", "bull", "bear"] as const;
 
-export function ResearchView({ api }: { api: ApiFetch }) {
-  const [ticker, setTicker] = useState("");
+export function ResearchView({ api, initialTicker }: { api: ApiFetch; initialTicker?: string }) {
+  const [ticker, setTicker] = useState(initialTicker || "");
   const [scenario, setScenario] = useState<"base" | "bull" | "bear">("base");
   const [quote, setQuote] = useState<Stock | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -46,7 +46,7 @@ export function ResearchView({ api }: { api: ApiFetch }) {
     return () => window.removeEventListener("insight-done", h);
   }, [loadInsights]);
 
-  const lookupQuote = async (t: string) => {
+  const lookupQuote = useCallback(async (t: string) => {
     if (!t) return;
     setQuoteLoading(true);
     setQuote(null);
@@ -58,18 +58,27 @@ export function ResearchView({ api }: { api: ApiFetch }) {
     } finally {
       setQuoteLoading(false);
     }
-  };
+  }, [api]);
 
-  const generate = async () => {
-    if (!ticker) return;
+  const generate = useCallback(async (t: string, s: string) => {
+    if (!t) return;
     setGenerating(true);
     setLatestInsight(null);
     await api("/api/v1/insights/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticker: ticker.toUpperCase(), scenario }),
+      body: JSON.stringify({ ticker: t.toUpperCase(), scenario: s }),
     });
-  };
+  }, [api]);
+
+  useEffect(() => {
+    if (initialTicker) {
+      setTicker(initialTicker);
+      lookupQuote(initialTicker);
+      generate(initialTicker, "base");
+    }
+  }, [initialTicker, lookupQuote, generate]);
+
 
   const deleteInsight = async (id: string) => {
     await api(`/api/v1/insights/${id}`, { method: "DELETE" });
@@ -134,7 +143,7 @@ export function ResearchView({ api }: { api: ApiFetch }) {
               <button className="btn" onClick={() => lookupQuote(ticker)} disabled={!ticker || quoteLoading}>
                 <Icon name="search" size={13} /> {quoteLoading ? "Loading…" : "Look up"}
               </button>
-              <button className="btn" onClick={generate}
+              <button className="btn" onClick={() => generate(ticker, scenario)}
                       disabled={!ticker || generating}
                       style={{ background: "var(--ink)", color: "var(--paper)" }}>
                 <Icon name="spark" size={13} /> {generating ? "Analysing…" : "AI Insight"}
